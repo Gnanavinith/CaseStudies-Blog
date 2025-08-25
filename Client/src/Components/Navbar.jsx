@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, ChevronDown, ChevronUp, Home, FileText, Briefcase, LogOut, Settings, DollarSign } from 'lucide-react';
+import { Menu, X, User, ChevronDown, ChevronUp, Home, FileText, Briefcase, LogOut, Settings, DollarSign, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SearchBar from './SearchBar';
@@ -48,7 +48,7 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, canCreateContent } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -68,21 +68,20 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <div className="flex items-center space-x-3">
-            <div className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-              Blog</div>
-              
-          </div>
+         {/* Logo */}
+<div className="flex items-center space-x-3">
+  <button
+    onClick={() => navigate('/')}
+    className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent hover:opacity-80 transition cursor-pointer"
+  >
+    CaseBlog
+  </button>
+</div>
+
 
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center space-x-2">
-            <button 
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 font-medium text-slate-700 hover:text-blue-600"
-            >
-              <Home size={18} />
-              <span>Home</span>
-            </button>
+            
             
             <Dropdown
               label="Case Studies"
@@ -96,7 +95,7 @@ const Navbar = () => {
               }}
             />
             
-                         <button 
+            <button 
                onClick={() => navigate('/blog')}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-slate-50 transition-all duration-200 font-medium text-slate-700 hover:text-blue-600"
             >
@@ -242,12 +241,12 @@ const Navbar = () => {
             )}
           </div>
           
-                     <button 
-             onClick={() => {
-               setIsMenuOpen(false);
-               navigate('/blog');
-             }}
-             className="flex items-center w-full text-left space-x-3 px-4 py-3 rounded-lg hover:bg-slate-50 transition-all duration-200 font-medium text-slate-700"
+          <button 
+            onClick={() => {
+              setIsMenuOpen(false);
+              navigate('/blog');
+            }}
+            className="flex items-center w-full text-left space-x-3 px-4 py-3 rounded-lg hover:bg-slate-50 transition-all duration-200 font-medium text-slate-700"
           >
             <FileText size={20} />
             <span>Blog</span>
@@ -277,6 +276,18 @@ const Navbar = () => {
                 <User size={20} />
                   <span>Profile</span>
                 </button>
+                {canCreateContent() && (
+                  <button 
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      navigate('/create');
+                    }}
+                    className="flex items-center w-full text-left space-x-3 px-4 py-3 rounded-lg hover:bg-green-50 hover:text-green-600 transition-all duration-200 font-medium text-slate-700"
+                  >
+                    <Plus size={20} />
+                    <span>Create Post</span>
+                  </button>
+                )}
                 <button 
                   onClick={logout}
                   className="flex items-center w-full px-4 py-3 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-medium text-slate-700"
@@ -317,4 +328,5 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default Navbar;   
+

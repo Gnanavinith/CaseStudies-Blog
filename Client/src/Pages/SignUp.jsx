@@ -46,8 +46,14 @@ const SignUp = () => {
     }
 
     try {
-      await register(formData.name, formData.email, formData.password);
-      navigate('/profile'); // Redirect to profile after successful registration
+      const result = await register(formData.name, formData.email, formData.password, formData.confirmPassword);
+      
+      if (result.success) {
+        // Redirect to profile after successful registration
+        navigate('/profile');
+      } else {
+        setError(result.error || 'Failed to create account. Please try again.');
+      }
     } catch (err) {
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {

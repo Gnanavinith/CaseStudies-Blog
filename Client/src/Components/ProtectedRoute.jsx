@@ -1,28 +1,26 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, requiredRole = null }) => {
-  const { user, isAuthenticated, loading } = useAuth();
-  const location = useLocation();
+const ProtectedRoute = ({ children, requireAuth = true, requireAuthor = false }) => {
+  const { user, isAuthenticated, canCreateContent } = useAuth();
 
-  // Show loading state while checking authentication
-  if (loading) {
+  // If authentication is required but user is not authenticated
+  if (requireAuth && !isAuthenticated) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  // If author role is required but user doesn't have it
+  if (requireAuthor && !canCreateContent()) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600 mb-6">You don't have permission to access this page.</p>
+          <p className="text-sm text-gray-500">Only authorized users can create content.</p>
+        </div>
       </div>
     );
-  }
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/" state={{ from: location }} replace />;
-  }
-
-  // Check role requirement if specified
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to="/" replace />;
   }
 
   return children;

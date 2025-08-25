@@ -5,8 +5,9 @@ import Navbar from "../src/Components/Navbar";
 import ProtectedRoute from "./Components/ProtectedRoute";
 
 import Home from "../src/Pages/Home";
-import Blog from "./pages/Blog";
-import Profile from "./pages/Profile";
+import Blog from "./Pages/Blog";
+import CaseStudies from "./Pages/CaseStudies";
+import Profile from "./Pages/Profile";
 import SignIn from "./Pages/SignIn";
 import SignUp from "./Pages/SignUp";
 import ForgotPassword from "./Pages/ForgotPassword";
@@ -16,6 +17,7 @@ import WindowsApps from "./Pages/WindowsApps";
 import DigitalMarketing from "./Pages/DigitalMarketing";
 import AdShoot from "./Pages/AdShoot";
 import Pricing from "./Pages/Pricing";
+import CreateContent from "./Pages/CreateContent";
 
 function App() {
   return (
@@ -25,6 +27,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/case-studies" element={<CaseStudies />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -39,6 +42,11 @@ function App() {
           <Route path="/case-studies/digital-marketing" element={<DigitalMarketing />} />
           <Route path="/case-studies/ad-shoot" element={<AdShoot />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/create" element={
+            <ProtectedRoute requireAuth={true} requireAuthor={true}>
+              <CreateContent />
+            </ProtectedRoute>
+          } />
         </Routes>
       </Router>
     </AuthProvider>

@@ -1,197 +1,288 @@
-import React, { useState } from 'react'
-import { Search, Calendar, User, ArrowRight, Tag, BookOpen } from 'lucide-react'
+import React, { useState, useEffect } from 'react';
+import { FileText, Clock, Eye, Heart, Search, Filter, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Blog = () => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('All')
+  const [blogs, setBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Mock blog data - in a real app, this would come from your backend
-  const blogPosts = [
-    {
-      id: 1,
-      title: "How Netflix Transformed Content Distribution",
-      excerpt: "Discover the revolutionary strategies that made Netflix the global streaming giant it is today...",
-      author: "Sarah Johnson",
-      date: "2024-01-15",
-      category: "Technology",
-      readTime: "8 min read",
-      image: "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400&h=250&fit=crop",
-      tags: ["Streaming", "Innovation", "Business Model"]
-    },
-    {
-      id: 2,
-      title: "Tesla's Marketing Strategy: Beyond Traditional Advertising",
-      excerpt: "Explore how Tesla achieved massive success without spending on traditional advertising...",
-      author: "Michael Chen",
-      date: "2024-01-12",
-      category: "Marketing",
-      readTime: "6 min read",
-      image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=250&fit=crop",
-      tags: ["Automotive", "Digital Marketing", "Brand Building"]
-    },
-    {
-      id: 3,
-      title: "Airbnb's Community-Driven Growth Strategy",
-      excerpt: "Learn how Airbnb built trust and community to scale globally...",
-      author: "Emma Rodriguez",
-      date: "2024-01-10",
-      category: "Business",
-      readTime: "7 min read",
-      image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=250&fit=crop",
-      tags: ["Sharing Economy", "Community", "Trust"]
-    },
-    {
-      id: 4,
-      title: "Spotify's Data-Driven Personalization",
-      excerpt: "How Spotify uses AI and data to create personalized user experiences...",
-      author: "David Kim",
-      date: "2024-01-08",
-      category: "Technology",
-      readTime: "9 min read",
-      image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=250&fit=crop",
-      tags: ["AI", "Personalization", "Music Tech"]
+  useEffect(() => {
+    fetchBlogs();
+  }, [currentPage, searchTerm, selectedTag]);
+
+  const fetchBlogs = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: 9
+      });
+
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+
+      if (selectedTag) {
+        params.append('tag', selectedTag);
+      }
+
+      const response = await fetch(`http://localhost:5000/api/blogs?${params}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setBlogs(data.blogs);
+        setTotalPages(data.pagination.totalPages);
+      } else {
+        setError(data.message || 'Failed to fetch blogs');
+      }
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ]
+  };
 
-  const categories = ['All', 'Technology', 'Marketing', 'Business', 'Design', 'Startups']
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setCurrentPage(1);
+  };
 
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const handleTagFilter = (tag) => {
+    setSelectedTag(selectedTag === tag ? '' : tag);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedTag('');
+    setCurrentPage(1);
+  };
+
+  // Extract unique tags from all blogs
+  const allTags = [...new Set(blogs.flatMap(blog => blog.tags))];
+
+  if (loading && blogs.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-gray-50 pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Latest Insights & Case Studies</h1>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Blog</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Discover proven strategies, innovative solutions, and success stories from industry leaders. 
-            Stay ahead with our curated collection of business insights.
+            Discover insights, tips, and stories from our team of experts. 
+            Stay updated with the latest trends in technology and business.
           </p>
         </div>
 
         {/* Search and Filters */}
-        <div className="mb-12">
-          <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
-            {/* Search Bar */}
-            <div className="relative w-full lg:w-96">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <form onSubmit={handleSearch} className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                placeholder="Search articles..."
+                  placeholder="Search blogs..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              </form>
             </div>
 
-            {/* Category Filter */}
+            {/* Tag Filters */}
             <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
+              {allTags.slice(0, 8).map((tag) => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    selectedCategory === category
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  key={tag}
+                  onClick={() => handleTagFilter(tag)}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                    selectedTag === tag
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {category}
+                  {tag}
                 </button>
               ))}
             </div>
+
+            {/* Clear Filters */}
+            {(searchTerm || selectedTag) && (
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Blog Posts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPosts.map((post) => (
-            <article key={post.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
-              {/* Image */}
-              <div className="relative overflow-hidden h-48">
-                <img
-                  src={post.image}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1 bg-blue-600 text-white text-sm font-medium rounded-full">
-                    {post.category}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
-                  <div className="flex items-center gap-1">
-                    <User className="w-4 h-4" />
-                    {post.author}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {new Date(post.date).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <BookOpen className="w-4 h-4" />
-                    {post.readTime}
-                  </div>
-                </div>
-
-                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors duration-200">
-                  {post.title}
-                </h3>
-                
-                <p className="text-gray-600 mb-4 line-clamp-3">
-                  {post.excerpt}
-                </p>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {post.tags.map((tag) => (
-                    <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Read More */}
-                <button className="inline-flex items-center text-blue-600 font-medium hover:text-blue-700 transition-colors duration-200 group">
-                  Read More
-                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {/* Load More Button */}
-        {filteredPosts.length > 0 && (
-          <div className="text-center mt-12">
-            <button className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
-              Load More Articles
-            </button>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+            <p className="text-red-800">{error}</p>
           </div>
         )}
 
-        {/* Empty State */}
-        {filteredPosts.length === 0 && (
+        {/* Blog Grid */}
+        {blogs.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-gray-400 mb-4">
-              <Search className="w-16 h-16 mx-auto" />
+            <FileText size={64} className="mx-auto text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No blogs found</h3>
+            <p className="text-gray-600">
+              {searchTerm || selectedTag 
+                ? 'Try adjusting your search or filters'
+                : 'Check back soon for new content!'
+              }
+            </p>
+          </div>
+        ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {blogs.map((blog) => (
+              <article key={blog._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                {/* Blog Image */}
+                {blog.image && (
+                  <div className="aspect-video bg-gray-200">
+                    <img
+                      src={blog.image}
+                      alt={blog.title}
+                      className="w-full h-full object-cover"
+                    />
+                </div>
+                )}
+
+                {/* Blog Content */}
+              <div className="p-6">
+                {/* Tags */}
+                  {blog.tags && blog.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {blog.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium"
+                        >
+                      {tag}
+                    </span>
+                  ))}
+                    </div>
+                  )}
+
+                  {/* Title */}
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                    {blog.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-gray-600 mb-4 line-clamp-3">
+                    {blog.description}
+                  </p>
+
+                  {/* Meta Information */}
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                    <div className="flex items-center space-x-4">
+                      <span className="flex items-center space-x-1">
+                        <Clock size={14} />
+                        <span>{blog.readTime} min read</span>
+                      </span>
+                      <span className="flex items-center space-x-1">
+                        <Eye size={14} />
+                        <span>{blog.views} views</span>
+                      </span>
+                    </div>
+                    <span className="flex items-center space-x-1">
+                      <Heart size={14} />
+                      <span>{blog.likes}</span>
+                    </span>
+                </div>
+
+                  {/* Author and Date */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold text-sm">
+                          {blog.authorName?.charAt(0)?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{blog.authorName}</p>
+                        <p className="text-gray-500 text-xs">
+                          {new Date(blog.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      to={`/blog/${blog.slug}`}
+                      className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors duration-200"
+                    >
+                      <span>Read More</span>
+                      <ArrowRight size={16} />
+                    </Link>
+                  </div>
+              </div>
+            </article>
+          ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-12">
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors duration-200"
+              >
+                Previous
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-4 py-2 border rounded-lg transition-colors duration-200 ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors duration-200"
+              >
+                Next
+              </button>
             </div>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">No articles found</h3>
-            <p className="text-gray-600">Try adjusting your search or filter criteria.</p>
           </div>
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Blog
+export default Blog;

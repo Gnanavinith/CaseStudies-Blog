@@ -29,8 +29,14 @@ const SignIn = () => {
     setError('');
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/profile'); // Redirect to profile after successful login
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        // Redirect to profile after successful login
+        navigate('/profile');
+      } else {
+        setError(result.error || 'Failed to sign in. Please try again.');
+      }
     } catch (err) {
       setError(err.message || 'Failed to sign in. Please try again.');
     } finally {

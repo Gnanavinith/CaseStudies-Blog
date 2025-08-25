@@ -1,63 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Mail, Building, Globe, Linkedin, Twitter, Github, Edit3, Save, X, BookOpen, Heart, Bookmark, Eye } from 'lucide-react';
+import { User, Mail, Building, Globe, Linkedin, Twitter, Github, Edit3, Save, AlertCircle, CheckCircle, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
-    name: user?.name || '',
-    bio: user?.bio || '',
-    company: user?.company || '',
-    position: user?.position || '',
-    website: user?.website || '',
+    name: '',
+    bio: '',
+    company: '',
+    position: '',
+    website: '',
     socialLinks: {
-      linkedin: user?.socialLinks?.linkedin || '',
-      twitter: user?.socialLinks?.twitter || '',
-      github: user?.socialLinks?.github || ''
+      linkedin: '',
+      twitter: '',
+      github: ''
     }
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
 
-  // Mock data - replace with actual API calls
-  const readingHistory = [
-    {
-      id: 1,
-      title: "Netflix: Revolutionizing Content Distribution",
-      type: "case-study",
-      readAt: "2024-01-15",
-      progress: 100
-    },
-    {
-      id: 2,
-      title: "How to Build a Successful Startup",
-      type: "blog",
-      readAt: "2024-01-10",
-      progress: 75
+  // Initialize edit data when user data changes
+  useEffect(() => {
+    if (user) {
+      setEditData({
+        name: user.name || '',
+        bio: user.bio || '',
+        company: user.company || '',
+        position: user.position || '',
+        website: user.website || '',
+        socialLinks: {
+          linkedin: user.socialLinks?.linkedin || '',
+          twitter: user.socialLinks?.twitter || '',
+          github: user.socialLinks?.github || ''
+        }
+      });
     }
-  ];
-
-  const likedPosts = [
-    {
-      id: 1,
-      title: "Tesla Marketing Strategy",
-      type: "case-study",
-      likedAt: "2024-01-12"
-    }
-  ];
-
-  const bookmarks = [
-    {
-      id: 1,
-      title: "Airbnb Growth Case Study",
-      type: "case-study",
-      bookmarkedAt: "2024-01-08"
-    }
-  ];
+  }, [user]);
 
   const handleEdit = () => {
     setIsEditing(true);
+    setMessage('');
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setMessage('');
+    // Reset to original user data
     setEditData({
       name: user?.name || '',
       bio: user?.bio || '',
@@ -72,26 +64,31 @@ const Profile = () => {
     });
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setMessage('');
-  };
-
   const handleSave = async () => {
     setLoading(true);
     setMessage('');
 
     try {
+      // Validate required fields
+      if (!editData.name.trim()) {
+        setMessage('Name is required');
+        setMessageType('error');
+        return;
+      }
+
       const result = await updateProfile(editData);
       if (result.success) {
         setMessage('Profile updated successfully!');
+        setMessageType('success');
         setIsEditing(false);
         setTimeout(() => setMessage(''), 3000);
     } else {
         setMessage(result.error || 'Failed to update profile');
+        setMessageType('error');
       }
     } catch (error) {
       setMessage('An error occurred while updating profile');
+      setMessageType('error');
     } finally {
       setLoading(false);
     }
@@ -116,24 +113,30 @@ const Profile = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
-  const getTypeColor = (type) => {
-    return type === 'case-study' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
-  };
-
-  const getTypeLabel = (type) => {
-    return type === 'case-study' ? 'Case Study' : 'Blog';
-  };
+  // Show loading state if user data is not yet loaded
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
     return (
     <div className="min-h-screen bg-gray-50 pt-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
           <div className="flex items-start justify-between mb-6">
@@ -144,7 +147,7 @@ const Profile = () => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">{user?.name}</h1>
                 <p className="text-gray-600 mb-1">{user?.email}</p>
-                <p className="text-gray-500 text-sm">Member since {formatDate(user?.createdAt || new Date())}</p>
+                <p className="text-gray-500 text-sm">Member since {formatDate(user?.createdAt)}</p>
                 <div className="flex items-center space-x-2 mt-2">
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     user?.role === 'admin' ? 'bg-red-100 text-red-800' :
@@ -156,6 +159,7 @@ const Profile = () => {
                 </div>
               </div>
             </div>
+            <div className="flex items-center space-x-2">
             <button
               onClick={isEditing ? handleSave : handleEdit}
               disabled={loading}
@@ -175,16 +179,31 @@ const Profile = () => {
                 </>
               )}
             </button>
+              {user?.role === 'author' && (
+                <button
+                  onClick={() => navigate('/create')}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                >
+                  <Plus size={16} />
+                  <span>Create Post</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Message */}
           {message && (
-            <div className={`p-4 rounded-lg mb-4 ${
-              message.includes('successfully') 
+            <div className={`p-4 rounded-lg mb-4 flex items-center space-x-2 ${
+              messageType === 'success'
                 ? 'bg-green-50 border border-green-200 text-green-700' 
                 : 'bg-red-50 border border-red-200 text-red-700'
             }`}>
-              {message}
+              {messageType === 'success' ? (
+                <CheckCircle size={20} />
+              ) : (
+                <AlertCircle size={20} />
+              )}
+              <span>{message}</span>
             </div>
           )}
 
@@ -193,16 +212,17 @@ const Profile = () => {
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <User size={20} className="text-gray-400" />
-                <div>
+                <div className="flex-1">
                   {isEditing ? (
                     <input
                       type="text"
                       value={editData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter your name"
                     />
                   ) : (
-                    <span className="text-gray-900">{user?.name}</span>
+                    <span className="text-gray-900">{user?.name || 'Not specified'}</span>
                   )}
             </div>
           </div>
@@ -214,7 +234,7 @@ const Profile = () => {
 
               <div className="flex items-center space-x-3">
                 <Building size={20} className="text-gray-400" />
-                <div>
+                <div className="flex-1">
                   {isEditing ? (
                     <input
                       type="text"
@@ -231,7 +251,7 @@ const Profile = () => {
 
               <div className="flex items-center space-x-3">
                 <User size={20} className="text-gray-400" />
-                <div>
+                <div className="flex-1">
                   {isEditing ? (
                     <input
                       type="text"
@@ -250,7 +270,7 @@ const Profile = () => {
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <Globe size={20} className="text-gray-400" />
-              <div>
+                <div className="flex-1">
                   {isEditing ? (
                   <input
                       type="url"
@@ -267,7 +287,7 @@ const Profile = () => {
 
               <div className="flex items-center space-x-3">
                 <Linkedin size={20} className="text-gray-400" />
-            <div>
+                <div className="flex-1">
                   {isEditing ? (
                 <input
                       type="url"
@@ -284,7 +304,7 @@ const Profile = () => {
 
               <div className="flex items-center space-x-3">
                 <Twitter size={20} className="text-gray-400" />
-            <div>
+                <div className="flex-1">
                   {isEditing ? (
                 <input
                       type="url"
@@ -301,7 +321,7 @@ const Profile = () => {
 
               <div className="flex items-center space-x-3">
                 <Github size={20} className="text-gray-400" />
-              <div>
+                <div className="flex-1">
                   {isEditing ? (
                   <input
                       type="url"
@@ -345,114 +365,6 @@ const Profile = () => {
             </button>
             </div>
           )}
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <BookOpen size={24} className="text-blue-600" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{user?.stats?.articlesRead || 0}</div>
-            <div className="text-gray-600">Articles Read</div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Eye size={24} className="text-green-600" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{user?.stats?.caseStudiesRead || 0}</div>
-            <div className="text-gray-600">Case Studies Read</div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Heart size={24} className="text-purple-600" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{user?.stats?.bookmarks || 0}</div>
-            <div className="text-gray-600">Bookmarks</div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bookmark size={24} className="text-orange-600" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{user?.stats?.bookmarks || 0}</div>
-            <div className="text-gray-600">Total Bookmarks</div>
-          </div>
-          </div>
-
-        {/* Content Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Reading History */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-              <BookOpen size={20} className="mr-2" />
-              Reading History
-            </h3>
-            <div className="space-y-3">
-              {readingHistory.map((item) => (
-                <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
-                      {getTypeLabel(item.type)}
-                    </span>
-                    <span className="text-xs text-gray-500">{formatDate(item.readAt)}</span>
-                  </div>
-                  <h4 className="font-medium text-gray-900 text-sm mb-1">{item.title}</h4>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${item.progress}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-xs text-gray-500 mt-1 block">{item.progress}% complete</span>
-              </div>
-              ))}
-              </div>
-            </div>
-
-          {/* Liked Posts */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-              <Heart size={20} className="mr-2" />
-              Liked Posts
-            </h3>
-            <div className="space-y-3">
-              {likedPosts.map((item) => (
-                <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
-                      {getTypeLabel(item.type)}
-                    </span>
-                    <span className="text-xs text-gray-500">{formatDate(item.likedAt)}</span>
-                  </div>
-                  <h4 className="font-medium text-gray-900 text-sm">{item.title}</h4>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bookmarks */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-              <Bookmark size={20} className="mr-2" />
-              Bookmarks
-            </h3>
-            <div className="space-y-3">
-              {bookmarks.map((item) => (
-                <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
-                      {getTypeLabel(item.type)}
-                    </span>
-                    <span className="text-xs text-gray-500">{formatDate(item.bookmarkedAt)}</span>
-                  </div>
-                  <h4 className="font-medium text-gray-900 text-sm">{item.title}</h4>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

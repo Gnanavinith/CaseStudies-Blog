@@ -36,11 +36,13 @@ export const AuthProvider = ({ children }) => {
             // Token is invalid, remove it
             localStorage.removeItem('token');
             setToken(null);
+            setUser(null);
           }
         } catch (error) {
           console.error('Auth check failed:', error);
           localStorage.removeItem('token');
           setToken(null);
+          setUser(null);
         }
       }
       setLoading(false);
@@ -72,6 +74,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user: data.user };
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, error: error.message };
     }
   };
@@ -99,6 +102,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user: data.user };
     } catch (error) {
+      console.error('Registration error:', error);
       return { success: false, error: error.message };
     }
   };
@@ -111,6 +115,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (updates) => {
     try {
+      // Validate required fields
+      if (!updates.name || !updates.name.trim()) {
+        throw new Error('Name is required');
+      }
+
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
@@ -126,9 +135,12 @@ export const AuthProvider = ({ children }) => {
         throw new Error(data.message || 'Profile update failed');
       }
 
+      // Update local user state with new data
       setUser(data.user);
+      
       return { success: true, user: data.user };
     } catch (error) {
+      console.error('Profile update error:', error);
       return { success: false, error: error.message };
     }
   };
@@ -152,6 +164,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
+      console.error('Password change error:', error);
       return { success: false, error: error.message };
     }
   };
@@ -174,6 +187,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message: data.message };
     } catch (error) {
+      console.error('Forgot password error:', error);
       return { success: false, error: error.message };
     }
   };
@@ -196,8 +210,44 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message: data.message };
     } catch (error) {
+      console.error('Reset password error:', error);
       return { success: false, error: error.message };
     }
+  };
+
+  const refreshUserData = async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
+  // Check if user has author role
+  const isAuthor = () => {
+    return user && user.role === 'author';
+  };
+
+  // Check if user can create content
+  const canCreateContent = () => {
+    return isAuthor();
+  };
+
+  // Check if user is the specific authorized user
+  const isAuthorizedUser = () => {
+    return user && user.email === 'hellotanglome@gmail.com';
   };
 
   const value = {
@@ -211,7 +261,11 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     forgotPassword,
     resetPassword,
-    isAuthenticated: !!user
+    refreshUserData,
+    isAuthenticated: !!user,
+    isAuthor,
+    canCreateContent,
+    isAuthorizedUser
   };
 
   return (

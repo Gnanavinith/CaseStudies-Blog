@@ -12,23 +12,102 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Middleware to verify JWT token
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    console.log('🔐 Auth middleware - checking request headers');
     
-    if (!token) {
+    const authHeader = req.header('Authorization');
+    console.log('🔐 Authorization header:', authHeader);
+    
+    if (!authHeader) {
+      console.log('❌ No Authorization header found');
       return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const token = authHeader.replace('Bearer ', '');
+    console.log('🔐 Token extracted:', token ? `${token.substring(0, 20)}...` : 'undefined');
+    
+    if (!token) {
+      console.log('❌ No token found after Bearer removal');
+      return res.status(401).json({ message: 'Access denied. No token provided.' });
+    }
+
+    // Verify JWT token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+      console.log('🔐 JWT verified successfully, userId:', decoded.userId);
+    } catch (jwtError) {
+      console.error('❌ JWT verification failed:', jwtError.message);
+      return res.status(401).json({ 
+        message: 'Invalid token.',
+        error: 'JWT verification failed'
+      });
+    }
+
+    if (!decoded.userId) {
+      console.log('❌ No userId in decoded token');
+      return res.status(401).json({ 
+        message: 'Invalid token.',
+        error: 'Token does not contain user ID'
+      });
+    }
+
+    // Find user in database
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
-      return res.status(401).json({ message: 'Invalid token.' });
+      console.log('❌ User not found in database for userId:', decoded.userId);
+      return res.status(401).json({ 
+        message: 'Invalid token.',
+        error: 'User not found in database'
+      });
     }
 
+    console.log('✅ User authenticated successfully:', user.email);
+    
+    // Set user in request object
     req.user = user;
     next();
+    
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token.' });
+    console.error('❌ Auth middleware error:', error);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    res.status(401).json({ 
+      message: 'Invalid token.',
+      error: 'Authentication failed'
+    });
+  }
+};
+
+// Middleware to check if user has author role
+const requireAuthor = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ 
+        message: 'Authentication required',
+        error: 'User not authenticated'
+      });
+    }
+
+    if (req.user.role !== 'author') {
+      return res.status(403).json({ 
+        message: 'Access denied',
+        error: 'Author role required to create content'
+      });
+    }
+
+    console.log('✅ Author access granted for:', req.user.email);
+    next();
+  } catch (error) {
+    console.error('❌ Author middleware error:', error);
+    res.status(500).json({ 
+      message: 'Authorization check failed',
+      error: 'Server error during authorization'
+    });
   }
 };
 
@@ -64,11 +143,19 @@ router.post('/register', [
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
+    // Determine user role based on email
+    let userRole = 'user'; // default role
+    if (email === 'hellotanglome@gmail.com') {
+      userRole = 'author';
+      console.log('🎭 Assigning author role to:', email);
+    }
+
     // Create new user
     user = new User({
       name,
       email,
-      password
+      password,
+      role: userRole
     });
 
     await user.save();
@@ -124,6 +211,13 @@ router.post('/login', [
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Ensure specific user has author role
+    if (email === 'hellotanglome@gmail.com' && user.role !== 'author') {
+      user.role = 'author';
+      await user.save();
+      console.log('🎭 Updated user role to author for:', email);
+    }
+
     // Update last active
     user.stats.lastActive = new Date();
     await user.save();
@@ -172,9 +266,26 @@ router.put('/profile', auth, [
   body('website').optional().isURL().withMessage('Please provide a valid URL')
 ], async (req, res) => {
   try {
+    // Debug: Check if req.user exists and has required properties
+    if (!req.user || !req.user._id) {
+      console.error('❌ req.user is missing or invalid:', req.user);
+      return res.status(401).json({ 
+        message: 'User authentication failed',
+        error: 'req.user is missing or invalid'
+      });
+    }
+
+    console.log('🔍 Profile update request received:', {
+      userId: req.user._id,
+      userEmail: req.user.email,
+      body: req.body,
+      user: req.user
+    });
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Validation errors:', errors.array());
       return res.status(400).json({ 
         message: 'Validation failed',
         errors: errors.array() 
@@ -184,6 +295,9 @@ router.put('/profile', auth, [
     const updates = req.body;
     const allowedUpdates = ['name', 'bio', 'company', 'position', 'website', 'socialLinks', 'preferences'];
     
+    console.log('📝 Allowed updates:', allowedUpdates);
+    console.log('📝 Requested updates:', updates);
+    
     // Filter out invalid fields
     const filteredUpdates = Object.keys(updates)
       .filter(key => allowedUpdates.includes(key))
@@ -192,25 +306,102 @@ router.put('/profile', auth, [
         return obj;
       }, {});
 
-    // Update user
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      filteredUpdates,
-      { new: true, runValidators: true }
-    ).select('-password');
+    console.log('✅ Filtered updates:', filteredUpdates);
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    // Validate that we have at least one field to update
+    if (Object.keys(filteredUpdates).length === 0) {
+      console.log('❌ No valid fields to update');
+      return res.status(400).json({ 
+        message: 'No valid fields to update',
+        error: 'All provided fields were filtered out'
+      });
     }
+
+    // Check if user exists in database
+    const existingUser = await User.findById(req.user._id);
+    if (!existingUser) {
+      console.log('❌ User not found in database:', req.user._id);
+      return res.status(404).json({ 
+        message: 'User not found in database',
+        error: 'User ID from token does not exist in database'
+      });
+    }
+
+    console.log('✅ User found in database:', existingUser.email);
+
+    // Update user with better error handling
+    let updatedUser;
+    try {
+      updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        filteredUpdates,
+        { 
+          new: true, 
+          runValidators: true,
+          upsert: false // Don't create if doesn't exist
+        }
+      ).select('-password');
+    } catch (updateError) {
+      console.error('❌ MongoDB update error:', updateError);
+      if (updateError.name === 'ValidationError') {
+        return res.status(400).json({ 
+          message: 'Validation failed during update',
+          error: updateError.message
+        });
+      }
+      throw updateError; // Re-throw to be caught by outer catch
+    }
+
+    if (!updatedUser) {
+      console.log('❌ User update failed - no user returned');
+      return res.status(404).json({ 
+        message: 'User update failed',
+        error: 'No user returned after update operation'
+      });
+    }
+
+    console.log('✅ User updated successfully:', updatedUser.email);
+    console.log('📝 Updated fields:', Object.keys(filteredUpdates));
 
     res.json({
       message: 'Profile updated successfully',
-      user
+      user: updatedUser
     });
 
   } catch (error) {
-    console.error('Profile update error:', error);
-    res.status(500).json({ message: 'Server error while updating profile' });
+    console.error('❌ Profile update error:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'CastError') {
+      return res.status(400).json({ 
+        message: 'Invalid user ID format',
+        error: 'The user ID provided is not valid'
+      });
+    }
+    
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Data validation failed',
+        error: error.message
+      });
+    }
+    
+    // Send more detailed error in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Profile update failed: ${error.message}` 
+      : 'Server error while updating profile';
+    
+    res.status(500).json({ 
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -367,6 +558,33 @@ router.post('/reset-password', [
     }
     res.status(500).json({ message: 'Server error while resetting password' });
   }
+});
+
+// @route   GET /api/auth/test
+// @desc    Test endpoint to verify server is working
+// @access  Public
+router.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Auth route is working!',
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path
+  });
+});
+
+// @route   GET /api/auth/test-auth
+// @desc    Test endpoint to verify auth middleware is working
+// @access  Private
+router.get('/test-auth', auth, (req, res) => {
+  res.json({ 
+    message: 'Auth middleware is working!',
+    user: {
+      id: req.user._id,
+      email: req.user.email,
+      name: req.user.name
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = router;
