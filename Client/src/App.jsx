@@ -18,6 +18,8 @@ import DigitalMarketing from "./Pages/DigitalMarketing";
 import AdShoot from "./Pages/AdShoot";
 import Pricing from "./Pages/Pricing";
 import CreateContent from "./Pages/CreateContent";
+import BlogDetail from "./Pages/BlogDetail";
+import CaseStudyDetail from "./Pages/CaseStudyDetail";
 
 function App() {
   return (
@@ -27,7 +29,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogDetail />} />
           <Route path="/case-studies" element={<CaseStudies />} />
+          <Route path="/case-studies/:slug" element={<CaseStudyDetail />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

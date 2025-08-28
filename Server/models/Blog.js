@@ -55,8 +55,7 @@ const blogSchema = new mongoose.Schema({
   },
   slug: {
     type: String,
-    unique: true,
-    required: [true, 'Slug is required']
+    unique: true
   },
   readTime: {
     type: Number,

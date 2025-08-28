@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Briefcase, Search, ArrowRight, Clock } from 'lucide-react';
 
 const WebApps = () => {
@@ -125,6 +126,20 @@ const WebApps = () => {
                   {study.description}
                 </p>
 
+                {/* Tags */}
+                {study.tags && study.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {study.tags.slice(0, 3).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {/* Author and Stats */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -133,17 +148,24 @@ const WebApps = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{study.authorName}</p>
+                      <p className="text-xs text-gray-500">{formatDate(study.createdAt)}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-400">{(study.views || 0).toLocaleString()} views</p>
+                    <div className="flex items-center space-x-3 text-xs text-gray-500">
+                      <span>{(study.views || 0).toLocaleString()} views</span>
+                      <span>{(study.likes || 0).toLocaleString()} likes</span>
+                    </div>
                   </div>
                 </div>
 
-                <button className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center group">
-                  Read Case Study
+                <Link
+                  to={`/case-studies/${study.slug}`}
+                  className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center group"
+                >
+                  View Case Study
                   <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </button>
+                </Link>
               </div>
             </article>
           ))}

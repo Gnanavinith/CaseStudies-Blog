@@ -69,7 +69,7 @@ router.get('/:slug', async (req, res) => {
     blog.views += 1;
     await blog.save();
     
-    res.json({ blog });
+    res.json(blog);
   } catch (error) {
     console.error('Error fetching blog:', error);
     res.status(500).json({ message: 'Server error while fetching blog' });

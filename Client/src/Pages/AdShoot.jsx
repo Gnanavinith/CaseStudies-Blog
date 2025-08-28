@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Camera, Search, ArrowRight, Star, Clock, User } from 'lucide-react';
 
 const AdShoot = () => {
@@ -7,65 +8,22 @@ const AdShoot = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  // Mock data - replace with actual API call
   useEffect(() => {
     const fetchCaseStudies = async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockData = [
-        {
-          id: 1,
-          title: "Apple: iPhone Photography Campaign",
-          company: "Apple",
-          excerpt: "How Apple revolutionized smartphone photography marketing through stunning ad campaigns",
-          category: "Ad Shoot",
-          industry: "Technology",
-          readTime: 9,
-          rating: 4.9,
-          views: 17500,
-          author: "Sophie Anderson",
-          authorAvatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face",
-          featuredImage: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=250&fit=crop",
-          publishedAt: "2024-01-25",
-          difficulty: "Advanced"
-        },
-        {
-          id: 2,
-          title: "Nike: Just Do It Campaign Evolution",
-          company: "Nike",
-          excerpt: "The evolution of Nike's iconic Just Do It campaign through powerful visual storytelling",
-          category: "Ad Shoot",
-          industry: "Sports",
-          readTime: 8,
-          rating: 4.8,
-          views: 15800,
-          author: "Carlos Rodriguez",
-          authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-          featuredImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=250&fit=crop",
-          publishedAt: "2024-01-20",
-          difficulty: "Intermediate"
-        },
-        {
-          id: 3,
-          title: "Coca-Cola: Happiness Factory Campaign",
-          company: "Coca-Cola",
-          excerpt: "How Coca-Cola created magical ad campaigns that captured the essence of happiness",
-          category: "Ad Shoot",
-          industry: "Beverages",
-          readTime: 7,
-          rating: 4.7,
-          views: 14200,
-          author: "Maria Garcia",
-          authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
-          featuredImage: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=250&fit=crop",
-          publishedAt: "2024-01-16",
-          difficulty: "Intermediate"
+      setLoading(true);
+      try {
+        const res = await fetch('http://localhost:5000/api/case-studies?category=ad-shoot&page=1&limit=12');
+        const data = await res.json();
+        if (res.ok) {
+          setCaseStudies(data.caseStudies || []);
+        } else {
+          setCaseStudies([]);
         }
-      ];
-      
-      setCaseStudies(mockData);
-      setLoading(false);
+      } catch (e) {
+        setCaseStudies([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchCaseStudies();
@@ -73,12 +31,9 @@ const AdShoot = () => {
 
   const filteredCaseStudies = caseStudies.filter(study => {
     const matchesSearch = study.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         study.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         study.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+                         study.description.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesFilter = selectedFilter === 'all' || study.difficulty.toLowerCase() === selectedFilter;
-    
-    return matchesSearch && matchesFilter;
+    return matchesSearch;
   });
 
   const formatDate = (dateString) => {
@@ -147,49 +102,30 @@ const AdShoot = () => {
               </div>
             </div>
 
-            {/* Filter */}
-            <div className="lg:w-48">
-              <select
-                value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-              >
-                <option value="all">All Difficulties</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </div>
+
           </div>
         </div>
 
         {/* Case Studies Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCaseStudies.map((study) => (
-            <article key={study.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300">
+            <article key={study._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300">
               {/* Image */}
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={study.featuredImage}
-                  alt={study.title}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1 bg-pink-600 text-white text-sm font-medium rounded-full">
-                    {study.difficulty}
-                  </span>
+              {study.image && (
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={study.image}
+                    alt={study.title}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
-                <div className="absolute top-4 right-4 flex items-center bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
-                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                  <span className="ml-1 text-sm font-medium text-gray-700">{study.rating}</span>
-                </div>
-              </div>
+              )}
 
               {/* Content */}
               <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-pink-600 font-medium">{study.industry}</span>
-                  <span className="text-sm text-gray-500">{formatDate(study.publishedAt)}</span>
+                  <span className="text-sm text-pink-600 font-medium">Ad Shoot</span>
+                  <span className="text-sm text-gray-500">{formatDate(study.createdAt)}</span>
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-pink-600 transition-colors duration-200">
@@ -197,33 +133,49 @@ const AdShoot = () => {
                 </h3>
 
                 <p className="text-gray-600 mb-4 line-clamp-3">
-                  {study.excerpt}
+                  {study.description}
                 </p>
+
+                {/* Tags */}
+                {study.tags && study.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {study.tags.slice(0, 3).map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Author and Stats */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <img
-                      src={study.authorAvatar}
-                      alt={study.author}
-                      className="w-8 h-8 rounded-full"
-                    />
+                    <div className="w-8 h-8 rounded-full bg-pink-100 text-pink-700 font-semibold flex items-center justify-center">
+                      {(study.authorName || 'U').charAt(0).toUpperCase()}
+                    </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{study.author}</p>
-                      <p className="text-xs text-gray-500">{study.company}</p>
+                      <p className="text-sm font-medium text-gray-900">{study.authorName}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">{study.readTime} min read</p>
-                    <p className="text-xs text-gray-400">{study.views.toLocaleString()} views</p>
+                    <div className="flex items-center space-x-3 text-xs text-gray-500">
+                      <span>{(study.views || 0).toLocaleString()} views</span>
+                      <span>{(study.likes || 0).toLocaleString()} likes</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Action Button */}
-                <button className="w-full bg-pink-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-pink-700 transition-colors duration-200 flex items-center justify-center group">
-                  Read Case Study
+                <Link
+                  to={`/case-studies/${study.slug}`}
+                  className="w-full bg-pink-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-pink-700 transition-colors duration-200 flex items-center justify-center group"
+                >
+                  View Case Study
                   <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </button>
+                </Link>
               </div>
             </article>
           ))}

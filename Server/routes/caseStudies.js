@@ -69,7 +69,7 @@ router.get('/:slug', async (req, res) => {
     caseStudy.views += 1;
     await caseStudy.save();
     
-    res.json({ caseStudy });
+    res.json(caseStudy);
   } catch (error) {
     console.error('Error fetching case study:', error);
     res.status(500).json({ message: 'Server error while fetching case study' });
